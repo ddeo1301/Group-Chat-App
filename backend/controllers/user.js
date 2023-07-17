@@ -7,6 +7,7 @@ const User = require('../models/user');
 function generateAcessToken(id){
     return jwt.sign({userId:id},'iamtheboss')
 }
+
 exports.postSignup = async (req,res)=>{
     try{
         const {name,email,number,password} = req.body;

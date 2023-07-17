@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Group Chat</title>
+    <link rel="icon" href="../img/favicon.png" />
+    <link rel="stylesheet" href="./chat.css" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css?family=Poppins:600&display=swap"
+      rel="stylesheet"
+    />
+    <script
+      src="https://kit.fontawesome.com/d97b87339f.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+    src="https://cdn.socket.io/4.5.0/socket.io.min.js"
+    integrity="sha384-7EyYLQZgWBi67fBtVxw60/OWl1kjsfrPFcaU0pp0nAh+i8FD068QogUvg85Ewy1k"
+    crossorigin="anonymous"
+  ></script>
+  </head>
+  <body>
+    <div class="group-container" id="container">
+      <aside>
+        <h2 class="bg-info-subtle text-center" id="username">Hey User !</h2>
+        <br />
+        <header>
+          <div class="search-box" id="add-user">
+            <form class="search-box" id="form-group">
+              <input
+                class="search-input groupName"
+                type="text"
+                name="email"
+                placeholder="Type user's email:"
+              />
+              <button class="search-btn fas fa-search-plus"></button>
+            </form>
+          </div>
+        </header>
+        <hr class="hrtag" />
+
+
+        
+        
+        <nav>
+          <div class="burger-button">
+              <span class="burger-top"></span>
+              <span class="burger-middle"></span>
+              <span class="burger-bottom"></span>
+          </div>
+           <div class="burger-menu ">
+             <ul id="group">
+              <li class="names"><u>User</u><span style="float:right;"><u>Admin Status</u></span></li>
+             </ul>
+           </div>
+        </nav>
+
+        <ul id="group"></ul>
+      </aside>
+      <main>
+        <header>
+          <img src="../img/download.jpg" style="height: 50px" alt="" />
+          <div>
+            <p id="groupname">ABCD</p>
+          </div>
+          <div class="logout-div">
+            <button class="fa fa-sign-out btn btn-danger rounded-5" id="Groups" type="button" onclick="backToGroups()">Groups/CreateGroup</button>
+            <button class="fa fa-sign-out btn btn-danger rounded-5" id="logout" type="button" onclick="logout()">Logout</button>
+          </div>
+        </header>
+        <ul id="chat">
+          <li class="you">
+            <div class="entete">
+              <span class="status green"></span>
+              <h2></h2>
+              <h3></h3>
+            </div>
+            <div class="triangle"></div>
+            <div class="message">
+            </div>
+          </li>
+          <li class="me">
+            <div class="entete">
+              <h3></h3>
+              <h2></h2>
+              <span class="status blue"></span>
+            </div>
+            <div class="triangle"></div>
+            <div class="message">
+          
+            </div>
+          </li>
+        </ul>
+        
+        <footer class="formholder">
+          <form id="uploadFile">
+            <input type="file" name="file" id="sendFile">
+            <button type="button" onclick="uploadFile()">send file</button>
+          </form>
+          <form id="chat-form">
+            <input class="chatbar" name="message" placeholder="Type your message"/>
+            <button class="btn bg-warning sendchat" type="submit">Send</button>
+            <!-- <button id="sendFile" class="btn warning" type="button" onclick="uploadfile()"><h2>+</h2></button> -->
+          </form>
+        
+          <!-- //<div id="media"></div> -->
+          <!-- <form id="mediaFiles">
+            <div style="padding-top: 10px;" class="user-file">
+                <input type="file" id="file" name="file" class="form-control" placeholder="Send messages">
+                <button class="btn btn-primary" type="submit" id="buttonsendfile">send file</button>
+          </div>
+        </form> -->
+        </footer>
+      </main>
+    </div>
+    
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.2.6/axios.min.js"></script>
+    <script src="./chat.js"></script>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+  </body>
+</html>

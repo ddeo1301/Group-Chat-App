@@ -41,6 +41,7 @@ app.use((req,res,next)=>{
 
 io.on('connection',socket=>{
     console.log(socket.id,'user connected');
+    
     socket.on('disconnect', function(){
         console.log('user disconnected');
       });
@@ -60,7 +61,14 @@ Chat.belongsTo(Group);
 User.belongsToMany(Group,{through:GroupTable});
 Group.belongsToMany(User,{through:GroupTable});
 
-sequelize.sync({force:false})
+sequelize.sync()
 .then(httpServer.listen(3000))
 .catch(err=>console.log(err))
 
+
+
+
+
+//The through option is set to GroupTable, which represents the junction table that stores the associations 
+//between users and groups. This table will have foreign keys referencing the primary keys of the User and 
+//Group models.

@@ -14,5 +14,4 @@ const User = sequelize.define('user',{
     password:Sequelize.STRING
 })
 
-
 module.exports = User;

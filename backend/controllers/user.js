@@ -28,13 +28,13 @@ exports.postSignup = async (req,res)=>{
                     number:number,
                     password:hash
                  })
-                res.status(200).json({success:true,message:'signed up successfully'})
+                res.status(200).json({success:true, message:'signed up successfully'})
                 }
             })
         }
         else{
             
-            return res.status(500).json({success:false,message:'User already exist'})
+            return res.status(500).json({success:false, message:'User already exist'})
         }
         }
     catch(err){
@@ -47,16 +47,16 @@ exports.postLogin = async (req,res,next)=>{
     try{
         const {email,password} = req.body;
         if(email.length===0||password.length===0){
-            return res.status(500).json({success:false,message:'all fields required'})
+            return res.status(500).json({success:false, message:'all fields required'})
         }
         const user = await User.findOne({where:{email:email}});
         if(user){
             bcrypt.compare(password,user.password,(err,result)=>{
                 if(err){
-                    return res.status(500).json({success:false,message:'something went wrong'})
+                    return res.status(500).json({success:false, message:'something went wrong'})
                 }
                 if(result==true){
-                    return res.status(200).json({success:true,message:'login successfully',userName:user.name,email: user.email,
+                    return res.status(200).json({success:true, message:'login successfully', userName:user.name,email: user.email,
                     token:generateAcessToken(user.id)
                 })
                 }

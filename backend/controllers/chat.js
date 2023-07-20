@@ -5,14 +5,18 @@ const UserGroup = require('../models/groupTable');
 const AWS = require('aws-sdk')//imports the AWS SDK to handle file uploads to Amazon S3.
 const {Op} = require('sequelize')
 
-exports.sendMessage = async (req, res, next) => {//sendMessage function is an asynchronous function that
-    try {// handles sending chat messages to a group. It checks if the user is a member of the group and 
-        //console.log(req.body);
-        const { message } = req.body;//validates the message content. It then creates a new chat message using
-        const { groupId } = req.params;// the createChat method on the req.user object and returns the created 
-
+//sendMessage function is an asynchronous function that handles sending chat messages to a group. It checks 
+//if the user is a member of the group and validates the message content. It then creates a new chat message
+// using the createChat method on the req.user object and returns the created chat message as a response.
+//code handles the creation of chat messages in a group chat, checks the user's membership in the group, 
+exports.sendMessage = async (req, res, next) => {
+    try {
+        const { message } = req.body;//extracts message and groupId from request body and parameters
+        const { groupId } = req.params; 
+        
+        //checks if current user is a member of specified group by querying the UserGroup model using findOne.
         const isUserInGroup = await UserGroup.findOne({ where: { userId: req.user.id, groupId: groupId } });
-        if (!isUserInGroup) {//chat message as a response.
+        if (!isUserInGroup) {
             return res.status(400).json({ success: false, message: 'You are no longer in group now !' });
         }
 
@@ -20,13 +24,13 @@ exports.sendMessage = async (req, res, next) => {//sendMessage function is an as
             return res.status(400).json({ success: false, message: 'Nothing entered !' });
         }
 
-        let result = await req.user.createChat({
-            message: message,
+        let result = await req.user.createChat({//create new chat messages in database with provided message 
+            message: message,//and groupId.******createChat kha se aaya. req.user kha s aaya*********
             groupId: groupId
         })
         
-        const data = { message: result.message, createdAt: result.createdAt };
-
+        const data = { message: result.message, createdAt: result.createdAt };//extracts relevant data from the
+        //result of create chat  operation, including the message content and creation timestamp.
         return res.status(200).json({ success: true, data});
     } catch (err) {
         console.log(err);
@@ -34,105 +38,119 @@ exports.sendMessage = async (req, res, next) => {//sendMessage function is an as
     }
 }
 
-
-exports.getMessage = async (req, res, next) => {//getMessage function is an asynchronous function that 
-    let msgId = req.query.lastMessageId;//retrieves chat messages for a group. It uses the Chat model to 
-    let { groupId } = req.params;//fetch messages that have an ID greater than the provided msgId and are 
-    console.log(`groupid ==> ${groupId}`);//associated with the specified groupId. It maps the retrieved .
+//getMessage function is an asynchronous function that retrieves chat messages for a group. It uses the Chat
+//model to fetch messages that have an ID greater than the provided msgId and are associated with the 
+//specified groupId. It maps the retrieved messages into a desired format and returns them as a response.
+//code retrieves messages from a group chat based on the provided lastMessageId and groupId, includes the 
+//associated user information, transforms the messages, and returns them in a simplified format
+exports.getMessage = async (req, res, next) => { 
+    let msgId = req.query.lastMessageId;//extracts the lastMessageId query parameter and the groupId 
+    let { groupId } = req.params;
+    console.log(`groupid ==> ${groupId}`);
+    //checks if current user is member of the specified group by querying the UserGroup model using findOne
     const showMessages = await UserGroup.findOne({where:{UserId:req.user.id,groupId:groupId}})
 
-    if(!showMessages){//messages into a desired format and returns them as a response
+    if(!showMessages){
         return res.status(404).json({success:false})
     }
-    let messages = await Chat.findAll({
-        include: ['user'],
-        where:[{id:{[Op.gt]:msgId}},{groupId:groupId}]
+    
+    let messages = await Chat.findAll({//retrieves all chat messages in the group using the Chat model's findAll method.
+        include: ['user'],//associated user model should be included in the result.
+        where:[{id:{[Op.gt]:msgId}}, {groupId:groupId}]// selects messages with an ID greater than the msgId 
+        //query parameter. It uses the Op.gt operator from Sequelize to perform the comparison.
+        //groupId: groupId: This condition selects messages that belong to the specified group.
+        //messages variable stores the retrieved chat messages.*****direct kaise check krega Op.gt**********
     });
 
-    const { email } = req.user;
-    //console.log(messages)
-    // const msgs = [];
-    // for (let i = 0; i < messages.length; i++) {
-    //     if (messages[i].id > msgId) {
-    //         msgs.push(messages[i]);
-    //     }
-    // }
-
+    const { email } = req.user;// extracts the current user's email from the req.user object.
     console.log(`msgId`, msgId);
-    //console.log(`message's length ==> ${msgs.length}`);
 
-    const data = messages.map(chat => {
-        let currentUser;
-        if (chat.user.email === email) {
-            currentUser = 'Same user';
+    const data = messages.map(chat => {//maps over the messages array and transforms each chat object into a
+        let currentUser;// simplified format. It checks if the chat's user email matches the current user's 
+        if (chat.user.email === email) {//email and sets the currentUser field accordingly
+            currentUser = 'Same user';// transformed chat objects are stored in the data array.
         }
-        return { message: chat.message, name: chat.user.name, createdAt: chat.createdAt, currentUser: currentUser, id: chat.id };
+        return { message: chat.message, name: chat.user.name, createdAt: chat.createdAt,
+                 currentUser: currentUser, id: chat.id };
     })
-    // console.log(messages);
+    
     res.status(200).json({ success: true, messages: data });
 }
 
-exports.addUser = async (req, res, next) => {//addUser function is an asynchronous function that adds a user
-    try {// to a group. It validates the request parameters, checks if the requesting user is an admin of the 
-        const { groupId } = req.params;//group, verifies if the user to be added exists, and checks if the
-        const { email } = req.body;// user is already a member of the group. If all checks pass, it creates 
-
-        if (!email) {//a new user-group association using the UserGroup model and returns a success response.
-            return res.status(500).json({ success: false, message: `Bad request !` });
+//addUser function is an asynchronous function that adds a user to a group.It validates the request parameters, 
+//checks if the requesting user is an admin of the group, verifies if the user to be added exists, and checks 
+//if the user is already a member of the group. If all checks pass, it creates a new user-group association 
+//using the UserGroup model and returns a success response. this code handles the logic for adding a user to 
+//a group, performs necessary checks and validations, and returns appropriate responses based on the success 
+//or failure of the operation.
+exports.addUser = async (req, res, next) => {
+    try {
+        const { groupId } = req.params;//extracts the groupId parameter from the request.
+        const { email } = req.body;//extracts the email field from the request body.
+        if (!email) {
+            return res.status(500).json({ success: false, message: `Bad request !. Email not found` });
         }
 
+        //checks if current user is admin of specified group by querying the UserGroup model using findOne
         const checkUserIsAdmin = await UserGroup.findOne({ where: { userId: req.user.id, groupId: groupId }});
         if (!checkUserIsAdmin.isAdmin) {
             return res.status(500).json({ success: false, message: `Only admin can add users !` });
         }
 
-        if (req.user.email == email) {
+        if (req.user.email == email) {//checks if the admin's email is the same as the email provided
             return res.status(500).json({ success: false, message: `Admin is already in group !` });
         }
 
-        const user = await User.findOne({ where: { email: email } });
-        if (!user) {
+        const user = await User.findOne({ where: { email: email } });//It searches for a user with the
+        //provided email by querying the User model using findOne.
+        if (!user) {//*****user model m kia query krta hai */
             return res.status(500).json({ success: false, message: `User doesn't exist !` });
         }
 
         const alreadyInGroup = await UserGroup.findOne({ where: { userId: user.id, groupId: groupId } });
-
-        if (alreadyInGroup) {
-            return res.status(500).json({ success: false, message: `User already in group !` });
+        if (alreadyInGroup) {//checks if user is already member of specified group by querying UserGroup model 
+            return res.status(500).json({ success: false, message: `User already in group !` });//using findOne.
         }
 
-        const data = await UserGroup.create({
-            userId: user.id,
+        const data = await UserGroup.create({//creates a new record in the UserGroup model with the provided
+            userId: user.id,//userId, groupId, and isAdmin set to false.*****usergroup model kha hai******
             groupId: groupId,
             isAdmin: false
         })
 
-        // const group = await UserGroup.findOne({where : {groupId : groupId}});
         res.status(200).json({ success: true, message: 'User successfully added !', data });
     } catch (err) {
         console.log(err);
         res.status(400).json({ success: false, message: `Something went wrong !` });
     }
-
 }
 
-exports.getUsers = async (req, res, next) => {//getUsers function retrieves the users of a group. It fetches 
-    const { groupId } = req.params;//user details and their admin status using the UserGroup and User models 
-    console.log(groupId, 'id')//and returns the retrieved data as a response.
+//getUsers function retrieves the users of a group. It fetches user details and their admin status using the
+//UserGroup and User models and returns retrieved data as a response. Code retrieves user details and admin 
+//emails associated with group, performs necessary database queries, and returns results in structured format.
+exports.getUsers = async (req, res, next) => {
+    const { groupId } = req.params;//extracts the groupId parameter from the request
+    console.log(groupId, 'id')
 
     try{
-        const data = await UserGroup.findAll({ where: { groupId: groupId } });
-        const users = data.map(element => {
+        //retrieves all user-group relationships associated with specified groupId by querying UserGroup model 
+        const data = await UserGroup.findAll({ where: { groupId: groupId } });//using findAll. retrieved data
+        // is stored in the data variable.****usergroup model kha hai*****
+        
+        //maps over data array and transforms each element into object containing user's ID and their admin 
+        const users = data.map(element => {//status. transformed user objects are stored in users array.
             return { id: element.userId, isAdmin: element.isAdmin };
         });
         const userDetails = [];
         let adminEmail = [];
     
-        for (let i = 0; i < users.length; i++) {
+        for (let i = 0; i < users.length; i++) {//iterates over users array
+            //searches for the user's details by querying the User model using their ID.
             const user = await User.findOne({ where: { id: users[i].id } });
+            //It constructs object with user's name, admin status, and email, and adds it to userDetails array.
             userDetails.push({ name: user.name, isAdmin: users[i].isAdmin, email: user.email });
             if (users[i].isAdmin) {
-                adminEmail.push(user.email);
+                adminEmail.push(user.email);//If the user is admin, it adds their email to adminEmail array.
             }
         }
     
@@ -143,10 +161,13 @@ exports.getUsers = async (req, res, next) => {//getUsers function retrieves the 
     }
 }
 
-exports.makeAdmin = async (req, res, next) => {//makeAdmin function makes a user an admin of a group. It 
-    console.log(req.body);//validates the request parameters, checks if the requesting user is an admin 
-    const { email } = req.body;//of the group, and updates the isAdmin attribute of the user-group 
-    const { groupId } = req.params;//association using the UserGroup model.
+//makeAdmin function makes a user an admin of a group. It validates the request parameters, checks if the 
+//requesting user is an admin of the group, and updates the isAdmin attribute of the user-group association 
+//using the UserGroup model.
+exports.makeAdmin = async (req, res, next) => { 
+    console.log(req.body); 
+    const { email } = req.body; 
+    const { groupId } = req.params;
 
     if (!email) {
         return res.status(500).json({ success: false, message: 'bad request !' });
@@ -159,7 +180,6 @@ exports.makeAdmin = async (req, res, next) => {//makeAdmin function makes a user
         }
 
         const user = await User.findOne({ where: { email: email } });
-        // console.log(user);
         const data = await UserGroup.update({
             isAdmin: true
         }, { where: { groupId: groupId, userId: user.id } });
@@ -172,20 +192,23 @@ exports.makeAdmin = async (req, res, next) => {//makeAdmin function makes a user
     }
 }
 
-exports.deleteUser = async (req, res, next) => {//deleteUser function removes a user from a group. It 
-    console.log(req.body, req.params);//validates the request parameters, checks if the requesting user 
-    const { groupId } = req.params;//is a member of the group, and verifies the user's admin status. If the 
-    const { email } = req.body;//user is not an admin, it deletes the user-group association. If the user is 
-    try {//an admin, it performs additional checks to ensure that there is at least one admin remaining in 
+//deleteUser function removes a user from a group. It validates the request parameters, checks if requesting
+//user is a member of the group, and verifies the user's admin status. If the user is not an admin, it deletes
+//the user-group association. If the user is an admin, it performs additional checks to ensure that there is at
+// least one admin remaining in the group before deleting the user.
+exports.deleteUser = async (req, res, next) => {
+    console.log(req.body, req.params); 
+    const { groupId } = req.params;//
+    const { email } = req.body;// 
+    try {
 
         const checkUser = await UserGroup.findOne({ where: { groupId: groupId, userId: req.user.id } });
-        if(!checkUser){//the group before deleting the user.
+        if(!checkUser){
             return res.status(500).json({ success: false, message: `You are no longer in group !` });
         }
 
         //check whether user is admin or not.
         if (checkUser.isAdmin == false) {
-            //if user try to delete ourself.
 
             if (req.user.email == email) {
                 await checkUser.destroy();
@@ -217,10 +240,12 @@ exports.deleteUser = async (req, res, next) => {//deleteUser function removes a 
 
 }
 
-exports.removeAdmin = async (req, res, next) => {//removeAdmin function removes admin privileges from a user.
-    console.log(req.body, req.params);// It validates the request parameters, checks if the requesting user 
-    const { email } = req.body;//is an admin of the group, and updates the isAdmin attribute of the 
-    const { groupId } = req.params;//user-group association.
+//removeAdmin function removes admin privileges from a user. It validates the request parameters, checks if 
+//the requesting user is an admin of the group, and updates the isAdmin attribute of user-group association
+exports.removeAdmin = async (req, res, next) => {
+    console.log(req.body, req.params); 
+    const { email } = req.body;
+    const { groupId } = req.params;
     try {
 
         const checkUserIsAdmin = await UserGroup.findOne({ where: { groupId: groupId, userId: req.user.id } });
@@ -246,11 +271,12 @@ exports.removeAdmin = async (req, res, next) => {//removeAdmin function removes 
     }
 }
 
-updloadToS3 = (file, filename) => {//uploadToS3 function uploads a file to an Amazon S3 bucket. It uses the 
-    const BUCKET_NAME = process.env.BUCKET_NAME;//AWS SDK to create an S3 client and uploads the file buffer 
-    const IAM_USER_KEY = process.env.IAM_USER_KEY;//to the specified bucket. It returns the uploaded file's 
-    const IAM_USER_SECRET = process.env.IAM_USER_SECRET;//location as a promise.
-
+//uploadToS3 function uploads a file to an Amazon S3 bucket. It uses the AWS SDK to create an S3 client and
+// uploads the file buffer to the specified bucket. It returns the uploaded file's location as a promise.
+updloadToS3 = (file, filename) => { 
+    const BUCKET_NAME = process.env.BUCKET_NAME; 
+    const IAM_USER_KEY = process.env.IAM_USER_KEY; 
+    const IAM_USER_SECRET = process.env.IAM_USER_SECRET;
     let s3Bucket = new AWS.S3({
         accessKeyId: IAM_USER_KEY,
         secretAccessKey: IAM_USER_SECRET,
@@ -274,12 +300,15 @@ updloadToS3 = (file, filename) => {//uploadToS3 function uploads a file to an Am
     })
 }
 
-exports.sendFile = async (req, res, next) => {//sendFile function handles uploading files to a group. It 
-    try{//validates the request parameters, retrieves the file buffer and filename, and uploads the file 
-        const { groupId } = req.params;//to Amazon S3 using the uploadToS3 function. It then creates a new 
-        if(!req.file){//chat message with the file URL using the createChat method on the req.user object and 
+//sendFile function handles uploading files to a group.It validates the request parameters, retrieves the file
+//buffer and filename, and uploads file to Amazon S3 using uploadToS3 function. It then creates a new chat
+//message with file URL using createChat method on req.user object and returns created chat message as response.
+exports.sendFile = async (req, res, next) => { 
+    try{ 
+        const { groupId } = req.params;
+        if(!req.file){
            return res.status(400).json({ success: false, message: `Please choose file !` });
-        }//returns the created chat message as a response.
+        }
     
         let type = (req.file.mimetype.split('/'))[1];
         console.log('type', type)
@@ -302,6 +331,8 @@ exports.sendFile = async (req, res, next) => {//sendFile function handles upload
         res.status(400).json({ success: false, message: `Something went wrong !` });
     }
 }
+
+
 
 
 
@@ -345,46 +376,7 @@ exports.sendFile = async (req, res, next) => {//sendFile function handles upload
 //database configurations.
 
 
-
-// Question: Can you explain the purpose and functionality of the provided code?
-// The provided code is a server-side implementation for handling a chat application. It includes various 
-//functionalities related to sending messages, managing users in groups, uploading files to Amazon S3, and 
-//retrieving chat messages.
-
-// Here's a breakdown of the code and its functionalities:
-// 1. **sendMessage**: This function handles the sending of messages in a group chat. It checks if the user
-// is a member of the group, validates the message input, and creates a new chat entry in the database using
-// the logged-in user's information.
-
-// 2. **getMessage**: This function retrieves chat messages from a specific group. It takes the last message
-// ID as a query parameter to fetch only new messages since the last retrieved message. It also checks if the
-// user is a member of the group before retrieving the messages.
-
-// 3. **addUser**: This function allows an admin user to add new users to a group. It verifies if the requesting
-// user is an admin, checks if the user to be added exists, and ensures the user is not already in the group.
-// If all checks pass, it creates a new entry in the UserGroup model to associate the user with the group.
-
-// 4. **getUsers**: This function retrieves the list of users in a specific group. It fetches user details 
-//from the User model and combines them with the isAdmin status obtained from the UserGroup model.
-
-// 5. **makeAdmin**: This function allows an admin user to make another user an admin of the group. It 
-//verifies if the requesting user is an admin and updates the isAdmin status of the specified user in the
-// UserGroup model.
-
-// 6. **deleteUser**: This function handles the removal of a user from a group. It checks if the requesting
-// user is an admin and ensures that only admins can remove members (except for themselves). It also checks
-// if the requesting user is still a member of the group. Once the checks pass, it removes the specified user
-// from the UserGroup model.
-
-// 7. **removeAdmin**: This function allows an admin user to remove admin privileges from another user in the
-// group. It performs similar checks as the makeAdmin function but updates the isAdmin status to false.
-
-// 8. **uploadToS3**: This is a helper function used by the sendFile function to upload a file to Amazon S3.
-// It uses the AWS SDK and the provided credentials (IAM_USER_KEY and IAM_USER_SECRET) to upload the file and returns the URL of the uploaded file.
-
-// 9. **sendFile**: This function handles the uploading of files to a group chat. It verifies that a file has
-// been provided, determines the file type, uploads the file to Amazon S3 using the uploadToS3 helper function,
-// and creates a chat entry with the file URL in the database.
-
-// Overall, the code provides a basic implementation for handling group chat functionality, including sending
-// messages, managing users, and uploading files.
+//By using `Op', we perform operations like greater than, less than, equal to, 
+//between, and more in our Sequelize queries. For example `id:{[Op.gt]:msgId}` is using the `Op.gt` operator
+//to find chat messages with an ID greater than `msgId`.`Op` object simplifies the process of constructing
+// complex queries by providing set of predefined operators.
